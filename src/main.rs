@@ -3,7 +3,7 @@ use reqwest::Client;
 use std::fmt;
 
 #[derive(Debug)]
-enum TranslationError {
+pub enum TranslationError {
     RequestFailed,
     ResponseParsingFailed,
     NoTranslationFound(String),
@@ -24,14 +24,14 @@ impl fmt::Display for TranslationError {
 }
 
 #[derive(Debug)]
-struct Translator {
+pub struct Translator {
     source_lang: String,
     target_lang: String,
     client: Client,
 }
 
 impl Translator {
-    fn new(source_lang: impl Into<String>, target_lang: impl Into<String>) -> Self {
+    pub fn new(source_lang: impl Into<String>, target_lang: impl Into<String>) -> Self {
         Self {
             source_lang: source_lang.into(),
             target_lang: target_lang.into(),
@@ -39,7 +39,7 @@ impl Translator {
         }
     }
 
-    async fn translate(&self, word: &str) -> Result<String, TranslationError> {
+    pub async fn translate(&self, word: &str) -> Result<String, TranslationError> {
         let api_url = "https://translate.googleapis.com/translate_a/single";
         let mut rng = rand::thread_rng();
         let mut retries = 0;
