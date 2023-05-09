@@ -41,6 +41,54 @@ impl Translator {
             client: Client::new(),
         }
     }
+
+    async fn translate(&self, word: &str) -> Result<String, TranslationError> {
+        let api_url = "https://translate.googleapis.com/translate_a/single";
+        let mut rng = rand::thread_rng();
+        let mut retries = 0;
+
+        loop {
+            let response = match self
+                .client
+                .get(api_url)
+                .query(&[
+                    ("client", "gtx"),
+                    ("dt", "t"),
+                    ("sl", &self.source_lang),
+                    ("tl", &self.target_lang),
+                    ("q", word),
+                ])
+                .send()
+                .await
+            {
+                Ok(response) => response,
+                Err(_) => return Err(TranslationError::RequestFailed),
+            };
+
+            let text = match response.text().await {
+                Ok(text) => text,
+                Err(_) => return Err(TranslationError::ResponseParsingFailed),
+            };
+
+            let json = match serde_json::from_str::<serde_json::Value>(&text) {
+                Ok(json) => json,
+                Err(_) => return Err(TranslationError::ResponseParsingFailed),
+            };
+
+            if let Some(translation) = json[0][0][0].as_str() {
+                return Ok(translation.to_owned());
+            } else {
+                let error_message = format!("No translation found for: {}", word);
+                if retries < 3 {
+                    let delay = rng.gen_range(0..=5) * 1000;
+                    std::thread::sleep(std::time::Duration::from_millis(delay));
+                    retries += 1;
+                } else {
+                    return Err(TranslationError::NoTranslationFound(error_message));
+                }
+            }
+        }
+    }
 }
 
 #[tokio::main]
