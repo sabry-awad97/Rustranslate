@@ -1,13 +1,12 @@
 use rand::Rng;
 use reqwest::Client;
-use std::io::{self, Write};
-use std::{fmt, process};
+use std::fmt;
 
+#[derive(Debug)]
 enum TranslationError {
     RequestFailed,
     ResponseParsingFailed,
     NoTranslationFound(String),
-    MaxRetriesExceeded(String),
 }
 
 impl fmt::Display for TranslationError {
@@ -20,13 +19,11 @@ impl fmt::Display for TranslationError {
             TranslationError::NoTranslationFound(word) => {
                 write!(f, "No translation found for: {}", word)
             }
-            TranslationError::MaxRetriesExceeded(message) => {
-                write!(f, "Max retries exceeded: {}", message)
-            }
         }
     }
 }
 
+#[derive(Debug)]
 struct Translator {
     source_lang: String,
     target_lang: String,
@@ -92,6 +89,22 @@ impl Translator {
 }
 
 #[tokio::main]
-async fn main() {
-    let translator = Translator::new("en", "es");
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let translator = Translator::new("en", "fr");
+    let translation = translator.translate("hello").await.unwrap();
+    println!("{}", translation);
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_translation_success() {
+        let translator = Translator::new("en", "fr");
+        let translation = translator.translate("hello").await.unwrap();
+        assert_eq!(translation, "Bonjour");
+    }
 }
